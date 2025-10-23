@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Subject Attendance Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background-color: #1f2937; /* gray-800 */
+            border: 1px solid #374151; /* gray-700 */
+            border-radius: 0.75rem; /* rounded-xl */
+            padding: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .input-field {
+            background-color: #374151; /* gray-700 */
+            border: 1px solid #4b5563; /* gray-600 */
+            color: #d1d5db; /* gray-300 */
+            border-radius: 0.5rem; /* rounded-lg */
+            padding: 0.75rem 1rem;
+            width: 100%;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #3b82f6; /* blue-500 */
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+        }
+        .btn {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem; /* rounded-lg */
+            transition: background-color 0.2s;
+            cursor: pointer;
+            width: 100%;
+            white-space: nowrap;
+        }
+        .btn:hover {
+            background-color: #2563eb; /* blue-600 */
+        }
+        .result-box {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            border-radius: 0.5rem; /* rounded-lg */
+            background-color: #374151; /* gray-700 */
+            text-align: center;
+        }
+        .result-text {
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 500;
+            color: #d1d5db; /* gray-300 */
+        }
+        .percentage-display {
+            font-size: 3rem; /* text-5xl */
+            font-weight: 700; /* font-bold */
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        #message {
+             min-height: 24px; /* Ensure space is reserved for the message */
+        }
+        .subject-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background-color: #374151;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            border: 1px solid #4b5563;
+        }
+        .subject-item.selected {
+            background-color: #3b82f6;
+            border-color: #1d4ed8;
+            color: white;
+        }
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #fca5a5; /* red-300 */
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            line-height: 1;
+        }
+        .delete-btn:hover {
+            color: white;
+            background-color: #ef4444; /* red-500 */
+        }
+        .subject-item.selected .delete-btn {
+            color: #fff;
+        }
+        .subject-item.selected .delete-btn:hover {
+            background-color: #dc2626; /* red-600 */
+        }
+        .disabled-panel {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-6xl">
+        <div class="card">
+            <h1 class="text-3xl font-bold text-center text-white mb-2">Multi-Subject Attendance Tracker</h1>
+            <p class="text-center text-gray-400 mb-6">Manage attendance for all your subjects in one place. Your data is saved automatically.</p>
+            
+            <div id="overallStats" class="result-box mb-8 p-4">
+                 <p class="result-text">Overall Attendance</p>
+                 <p id="overallPercentage" class="percentage-display text-2xl">0.00%</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Column 1: Subjects -->
+                <div class="space-y-4 rounded-lg bg-gray-800/50 p-6 border border-gray-700">
+                    <h2 class="text-xl font-semibold text-white">Subjects</h2>
+                    <div class="flex gap-2">
+                        <input type="text" id="newSubjectInput" class="input-field" placeholder="New subject name">
+                        <button id="addSubjectBtn" class="btn !w-auto px-4">Add</button>
+                    </div>
+                    <div id="subjectList" class="space-y-2 max-h-96 overflow-y-auto pr-2">
+                        <!-- Subjects will be populated here by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Column 2: Main Calculator -->
+                <div id="calculatorPanel" class="space-y-6">
+                    <h2 class="text-xl font-semibold text-white">Current Status</h2>
+                    <div>
+                        <label for="attendedClasses" class="block mb-2 font-medium text-gray-300">Classes Attended</label>
+                        <input type="number" id="attendedClasses" class="input-field" placeholder="e.g., 35">
+                    </div>
+                    <div>
+                        <label for="totalClasses" class="block mb-2 font-medium text-gray-300">Total Classes Held</label>
+                        <input type="number" id="totalClasses" class="input-field" placeholder="e.g., 40">
+                    </div>
+                    
+                    <div id="result" class="result-box hidden">
+                        <p class="result-text">Subject attendance is:</p>
+                        <p id="percentage" class="percentage-display">0.00%</p>
+                        <p id="message" class="text-gray-400 font-medium"></p>
+                    </div>
+                </div>
+
+                <!-- Column 3: Future Planner -->
+                <div id="plannerPanel" class="space-y-6">
+                     <h2 class="text-xl font-semibold text-white">Future Planner</h2>
+                    <div>
+                        <label for="targetPercent" class="block mb-2 font-medium text-gray-300">Target Attendance (%)</label>
+                        <input type="number" id="targetPercent" class="input-field" placeholder="e.g., 75">
+                    </div>
+                    <button id="calculateNeededBtn" class="btn">How many classes to attend?</button>
+                    
+                    <div>
+                        <label for="minPercent" class="block mb-2 font-medium text-gray-300">Minimum Attendance (%)</label>
+                        <input type="number" id="minPercent" class="input-field" placeholder="e.g., 65">
+                    </div>
+                    <button id="calculateBunkBtn" class="btn">How many classes can I miss?</button>
+                    
+                    <div id="plannerResult" class="result-box hidden">
+                        <p id="plannerMessage" class="result-text"></p>
+                    </div>
+                </div>
+            </div>
+             <!-- Error Modal -->
+            <div id="errorModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50">
+                <div class="card max-w-sm w-full">
+                    <h3 class="text-xl font-bold text-red-400 mb-4 text-center">Invalid Input</h3>
+                    <p id="errorMessage" class="text-center text-gray-300 mb-6"></p>
+                    <button id="closeModalBtn" class="btn bg-red-500 hover:bg-red-600">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // State
+            let subjects = [];
+            let selectedSubjectName = null;
+
+            // DOM Elements
+            const newSubjectInput = document.getElementById('newSubjectInput');
+            const addSubjectBtn = document.getElementById('addSubjectBtn');
+            const subjectList = document.getElementById('subjectList');
+
+            const calculatorPanel = document.getElementById('calculatorPanel');
+            const plannerPanel = document.getElementById('plannerPanel');
+            
+            const attendedClassesInput = document.getElementById('attendedClasses');
+            const totalClassesInput = document.getElementById('totalClasses');
+            
+            const resultDiv = document.getElementById('result');
+            const percentageDisplay = document.getElementById('percentage');
+            const messageDisplay = document.getElementById('message');
+            const overallPercentageDisplay = document.getElementById('overallPercentage');
+
+            const targetPercentInput = document.getElementById('targetPercent');
+            const calculateNeededBtn = document.getElementById('calculateNeededBtn');
+            const minPercentInput = document.getElementById('minPercent');
+            const calculateBunkBtn = document.getElementById('calculateBunkBtn');
+            const plannerResultDiv = document.getElementById('plannerResult');
+            const plannerMessageDisplay = document.getElementById('plannerMessage');
+            
+            const errorModal = document.getElementById('errorModal');
+            const errorMessageDisplay = document.getElementById('errorMessage');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+
+            // --- State Management ---
+            function loadState() {
+                const savedSubjects = localStorage.getItem('attendanceSubjects');
+                const savedSelected = localStorage.getItem('attendanceSelectedSubject');
+                subjects = savedSubjects ? JSON.parse(savedSubjects) : [];
+                selectedSubjectName = savedSelected || (subjects.length > 0 ? subjects[0].name : null);
+            }
+
+            function saveState() {
+                localStorage.setItem('attendanceSubjects', JSON.stringify(subjects));
+                localStorage.setItem('attendanceSelectedSubject', selectedSubjectName);
+            }
+
+            // --- Rendering ---
+            function render() {
+                renderSubjectList();
+                renderCalculator();
+                renderOverallStats();
+            }
+
+            function renderSubjectList() {
+                subjectList.innerHTML = '';
+                if (subjects.length === 0) {
+                    subjectList.innerHTML = `<p class="text-gray-500 text-center p-4">Add a subject to begin.</p>`;
+                    return;
+                }
+                subjects.forEach(subject => {
+                    const item = document.createElement('div');
+                    item.className = 'subject-item';
+                    if (subject.name === selectedSubjectName) {
+                        item.classList.add('selected');
+                    }
+                    item.dataset.name = subject.name;
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.textContent = subject.name;
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.innerHTML = '&times;';
+                    deleteBtn.dataset.name = subject.name;
+                    
+                    item.appendChild(nameSpan);
+                    item.appendChild(deleteBtn);
+                    subjectList.appendChild(item);
+                });
+            }
+
+            function renderCalculator() {
+                plannerResultDiv.classList.add('hidden');
+                if (!selectedSubjectName || subjects.length === 0) {
+                    calculatorPanel.classList.add('disabled-panel');
+                    plannerPanel.classList.add('disabled-panel');
+                    attendedClassesInput.value = '';
+                    totalClassesInput.value = '';
+                    resultDiv.classList.add('hidden');
+                    return;
+                }
+
+                calculatorPanel.classList.remove('disabled-panel');
+                plannerPanel.classList.remove('disabled-panel');
+                
+                const subject = subjects.find(s => s.name === selectedSubjectName);
+                attendedClassesInput.value = subject.attended;
+                totalClassesInput.value = subject.total;
+
+                calculateCurrentPercentage();
+            }
+            
+            function renderOverallStats() {
+                const totalAttended = subjects.reduce((sum, s) => sum + s.attended, 0);
+                const totalHeld = subjects.reduce((sum, s) => sum + s.total, 0);
+                
+                if (totalHeld === 0) {
+                    overallPercentageDisplay.textContent = 'N/A';
+                } else {
+                    const overallPercentage = (totalAttended / totalHeld) * 100;
+                    overallPercentageDisplay.textContent = `${overallPercentage.toFixed(2)}%`;
+                }
+            }
+
+
+            // --- Event Handlers ---
+            addSubjectBtn.addEventListener('click', () => {
+                const name = newSubjectInput.value.trim();
+                if (name && !subjects.some(s => s.name.toLowerCase() === name.toLowerCase())) {
+                    subjects.push({ name, attended: 0, total: 0 });
+                    if (!selectedSubjectName) {
+                       selectedSubjectName = name;
+                    }
+                    newSubjectInput.value = '';
+                    saveState();
+                    render();
+                } else if (!name) {
+                    showError("Subject name cannot be empty.");
+                } else {
+                    showError("A subject with this name already exists.");
+                }
+            });
+            
+            newSubjectInput.addEventListener('keypress', (e) => {
+                if(e.key === 'Enter') addSubjectBtn.click();
+            });
+
+            subjectList.addEventListener('click', (e) => {
+                const subjectItem = e.target.closest('.subject-item');
+                const deleteButton = e.target.closest('.delete-btn');
+
+                if (deleteButton) {
+                    e.stopPropagation();
+                    const nameToDelete = deleteButton.dataset.name;
+                    subjects = subjects.filter(s => s.name !== nameToDelete);
+                    if (selectedSubjectName === nameToDelete) {
+                        selectedSubjectName = subjects.length > 0 ? subjects[0].name : null;
+                    }
+                    saveState();
+                    render();
+                } else if (subjectItem) {
+                    selectedSubjectName = subjectItem.dataset.name;
+                    saveState();
+                    render();
+                }
+            });
+            
+            function updateSubjectData() {
+                if (!selectedSubjectName) return;
+                const subject = subjects.find(s => s.name === selectedSubjectName);
+                const attended = parseInt(attendedClassesInput.value) || 0;
+                const total = parseInt(totalClassesInput.value) || 0;
+                
+                subject.attended = attended < 0 ? 0 : attended;
+                subject.total = total < 0 ? 0 : total;
+                
+                saveState();
+                calculateCurrentPercentage();
+                renderOverallStats();
+            }
+
+            attendedClassesInput.addEventListener('input', updateSubjectData);
+            totalClassesInput.addEventListener('input', updateSubjectData);
+
+            function calculateCurrentPercentage() {
+                 const subject = subjects.find(s => s.name === selectedSubjectName);
+                 if (!subject) return;
+
+                 const { attended, total } = subject;
+                 
+                 if (attended > total) {
+                    showError("Attended classes cannot be more than total classes.");
+                    resultDiv.classList.add('hidden');
+                    return;
+                 }
+                
+                resultDiv.classList.remove('hidden');
+
+                if (total === 0) {
+                    percentageDisplay.textContent = "N/A";
+                    messageDisplay.textContent = "No classes held yet.";
+                    percentageDisplay.className = "percentage-display text-gray-400";
+                } else {
+                    const percentage = (attended / total) * 100;
+                    percentageDisplay.textContent = `${percentage.toFixed(2)}%`;
+
+                    if (percentage >= 75) {
+                        messageDisplay.textContent = "Great! You are on track.";
+                        percentageDisplay.className = "percentage-display text-green-400";
+                    } else if (percentage >= 65) {
+                        messageDisplay.textContent = "You're close, keep it up!";
+                        percentageDisplay.className = "percentage-display text-yellow-400";
+                    } else {
+                        messageDisplay.textContent = "Warning! Your attendance is low.";
+                        percentageDisplay.className = "percentage-display text-red-400";
+                    }
+                }
+            }
+
+
+            // Planner logic (no changes to formulas, just data source)
+            calculateNeededBtn.addEventListener('click', () => {
+                const subject = subjects.find(s => s.name === selectedSubjectName);
+                if(!subject) return;
+                const { attended, total } = subject;
+                const target = parseFloat(targetPercentInput.value);
+
+                if (isNaN(target)) { showError("Please enter a target percentage."); return; }
+                if (target <= 0 || target > 100) { showError("Target percentage must be between 1 and 100."); return; }
+                
+                const currentPercent = total > 0 ? (attended / total) * 100 : 0;
+                if (currentPercent >= target) {
+                    plannerMessageDisplay.textContent = `You've already reached your ${target}% target!`;
+                } else {
+                    const needed = Math.ceil((target * total - 100 * attended) / (100 - target));
+                    if (needed > 0 && needed < Infinity) {
+                         plannerMessageDisplay.textContent = `You need to attend the next ${needed} class(es) to reach ${target}%.`;
+                    } else {
+                         plannerMessageDisplay.textContent = `It's not possible to reach ${target}% from your current status.`;
+                    }
+                }
+                plannerResultDiv.classList.remove('hidden');
+            });
+
+            calculateBunkBtn.addEventListener('click', () => {
+                const subject = subjects.find(s => s.name === selectedSubjectName);
+                if(!subject) return;
+                const { attended, total } = subject;
+                const min = parseFloat(minPercentInput.value);
+                
+                if (isNaN(min)) { showError("Please enter a minimum percentage."); return; }
+                if (min <= 0 || min >= 100) { showError("Minimum percentage must be between 1 and 99."); return; }
+
+                const currentPercent = total > 0 ? (attended / total) * 100 : 100;
+                if (currentPercent < min) {
+                    plannerMessageDisplay.textContent = `You are already below the ${min}% minimum.`;
+                } else {
+                    const canMiss = Math.floor((100 * attended - min * total) / min);
+                    if (canMiss >= 0) {
+                        plannerMessageDisplay.textContent = `You can miss the next ${canMiss} class(es) and stay above ${min}%.`;
+                    } else {
+                        plannerMessageDisplay.textContent = `You cannot miss any more classes to stay above ${min}%.`;
+                    }
+                }
+                plannerResultDiv.classList.remove('hidden');
+            });
+
+
+            // --- Modal ---
+            function showError(message) {
+                errorMessageDisplay.textContent = message;
+                errorModal.classList.remove('hidden');
+            }
+            closeModalBtn.addEventListener('click', () => {
+                errorModal.classList.add('hidden');
+            });
+
+            // --- Initial Load ---
+            loadState();
+            render();
+        });
+    </script>
+
+</body>
+</html>
+
